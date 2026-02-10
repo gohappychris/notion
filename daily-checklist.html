@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Checklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: #1a73e8;
+            color: #fff;
+            border-radius: 16px 16px 0 0;
+            padding: 28px 24px 20px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .header .date {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+
+        .header .progress-bar {
+            margin-top: 16px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .header .progress-fill {
+            height: 100%;
+            background: #fff;
+            border-radius: 8px;
+            transition: width 0.4s ease;
+        }
+
+        .header .progress-text {
+            font-size: 12px;
+            margin-top: 6px;
+            opacity: 0.85;
+        }
+
+        /* Main body */
+        .body {
+            background: #fff;
+            border-radius: 0 0 16px 16px;
+            padding: 16px 24px 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .toolbar button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-reset {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        .btn-reset:hover {
+            background: #e55a5a;
+        }
+
+        .btn-alarm {
+            background: #ffa726;
+            color: #fff;
+        }
+
+        .btn-alarm:hover {
+            background: #f59b1e;
+        }
+
+        .btn-alarm.active {
+            background: #43a047;
+        }
+
+        .btn-alarm.active:hover {
+            background: #388e3c;
+        }
+
+        /* Add item form */
+        .add-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .add-form input[type="text"] {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .add-form input[type="text"]:focus {
+            border-color: #1a73e8;
+        }
+
+        .add-form button {
+            padding: 10px 18px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .add-form button:hover {
+            background: #1565c0;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 12px;
+            animation: slideIn 0.25s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #1a73e8;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .checklist li .item-text {
+            flex: 1;
+            font-size: 15px;
+            color: #333;
+            transition: color 0.2s, text-decoration 0.2s;
+            word-break: break-word;
+        }
+
+        .checklist li.checked .item-text {
+            color: #aaa;
+            text-decoration: line-through;
+        }
+
+        .checklist li .btn-delete {
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .checklist li .btn-delete:hover {
+            color: #ff6b6b;
+            background: #fff0f0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 0;
+            color: #bbb;
+            font-size: 14px;
+        }
+
+        /* Alarm modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            width: 320px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .modal h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .modal label {
+            display: block;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        .modal input[type="time"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        .modal input[type="time"]:focus {
+            border-color: #1a73e8;
+        }
+
+        .modal .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .modal .modal-actions button {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal .btn-cancel {
+            background: #e0e0e0;
+            color: #555;
+        }
+
+        .modal .btn-save {
+            background: #1a73e8;
+            color: #fff;
+        }
+
+        .modal .btn-remove-alarm {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        /* Alarm banner */
+        .alarm-banner {
+            display: none;
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #2e7d32;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alarm-banner.show {
+            display: flex;
+        }
+
+        .alarm-banner button {
+            background: none;
+            border: none;
+            color: #2e7d32;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+        }
+
+        /* Alarm ringing overlay */
+        .alarm-ring-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .alarm-ring-overlay.show {
+            display: flex;
+        }
+
+        .alarm-ring-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 36px 32px;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .alarm-ring-box .alarm-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .alarm-ring-box h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .alarm-ring-box p {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .alarm-ring-box button {
+            padding: 12px 32px;
+            background: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Confirm dialog */
+        .confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 150;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .confirm-overlay.show {
+            display: flex;
+        }
+
+        .confirm-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .confirm-box p {
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .confirm-box .confirm-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .confirm-box .confirm-actions button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .confirm-box .btn-confirm-yes {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        .confirm-box .btn-confirm-no {
+            background: #e0e0e0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Daily Checklist</h1>
+            <div class="date" id="currentDate"></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="progressText">0 / 0 completed</div>
+        </div>
+
+        <!-- Body -->
+        <div class="body">
+            <!-- Alarm banner -->
+            <div class="alarm-banner" id="alarmBanner">
+                <span id="alarmBannerText"></span>
+                <button onclick="openAlarmModal()" title="Edit alarm">&#9998;</button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <button class="btn-reset" onclick="confirmReset()">Reset</button>
+                <button class="btn-alarm" id="alarmBtn" onclick="openAlarmModal()">Alarm</button>
+            </div>
+
+            <!-- Add form -->
+            <div class="add-form">
+                <input type="text" id="newItemInput" placeholder="Add a new task..."
+                       onkeydown="if(event.key==='Enter') addItem()">
+                <button onclick="addItem()">Add</button>
+            </div>
+
+            <!-- Checklist -->
+            <ul class="checklist" id="checklist"></ul>
+            <div class="empty-state" id="emptyState">
+                No tasks yet. Add one above!
+            </div>
+        </div>
+    </div>
+
+    <!-- Alarm setting modal -->
+    <div class="modal-overlay" id="alarmModal">
+        <div class="modal">
+            <h2>Set Alarm</h2>
+            <label for="alarmTime">Alarm time</label>
+            <input type="time" id="alarmTime" value="09:00">
+            <div class="modal-actions">
+                <button class="btn-remove-alarm" id="removeAlarmBtn" onclick="removeAlarm()">Remove</button>
+                <button class="btn-cancel" onclick="closeAlarmModal()">Cancel</button>
+                <button class="btn-save" onclick="saveAlarm()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset confirm dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <p>Reset all tasks?<br>All checkboxes will be unchecked.</p>
+            <div class="confirm-actions">
+                <button class="btn-confirm-no" onclick="closeConfirm()">Cancel</button>
+                <button class="btn-confirm-yes" onclick="resetChecklist()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alarm ringing overlay -->
+    <div class="alarm-ring-overlay" id="alarmRingOverlay">
+        <div class="alarm-ring-box">
+            <div class="alarm-icon">&#9200;</div>
+            <h2>Time to check your tasks!</h2>
+            <p>Review today's checklist and get started.</p>
+            <button onclick="dismissAlarm()">Dismiss</button>
+        </div>
+    </div>
+
+    <script>
+        // ===== State =====
+        const STORAGE_KEY = 'dailyChecklist';
+        const ALARM_KEY = 'dailyChecklistAlarm';
+
+        let items = [];
+        let alarmTime = null; // "HH:MM" string or null
+        let alarmFired = false;
+        let alarmAudioCtx = null;
+
+        // ===== Init =====
+        function init() {
+            loadData();
+            renderDate();
+            renderList();
+            updateProgress();
+            loadAlarm();
+            startAlarmChecker();
+        }
+
+        // ===== LocalStorage =====
+        function loadData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    items = JSON.parse(raw);
+                }
+            } catch(e) {
+                items = [];
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        }
+
+        // ===== Date display =====
+        function renderDate() {
+            const now = new Date();
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dateStr = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        // ===== Add item =====
+        function addItem() {
+            const input = document.getElementById('newItemInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            items.push({ id: Date.now(), text: text, checked: false });
+            input.value = '';
+            input.focus();
+            saveData();
+            renderList();
+            updateProgress();
+        }
+
+        // ===== Toggle check =====
+        function toggleItem(id) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                saveData();
+                renderList();
+                updateProgress();
+            }
+        }
+
+        // ===== Delete item =====
+        function deleteItem(id) {
+            items = items.filter(i => i.id !== id);
+            saveData();
+            renderList();
+            updateProgress();
+        }
+
+        // ===== Render list =====
+        function renderList() {
+            const ul = document.getElementById('checklist');
+            const empty = document.getElementById('emptyState');
+
+            if (items.length === 0) {
+                ul.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            ul.innerHTML = items.map(item => `
+                <li class="${item.checked ? 'checked' : ''}">
+                    <input type="checkbox" ${item.checked ? 'checked' : ''}
+                           onchange="toggleItem(${item.id})">
+                    <span class="item-text">${escapeHtml(item.text)}</span>
+                    <button class="btn-delete" onclick="deleteItem(${item.id})" title="Delete">&times;</button>
+                </li>
+            `).join('');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ===== Progress =====
+        function updateProgress() {
+            const total = items.length;
+            const done = items.filter(i => i.checked).length;
+            const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').textContent =
+                `${done} / ${total} completed`;
+        }
+
+        // ===== Reset =====
+        function confirmReset() {
+            document.getElementById('confirmOverlay').classList.add('show');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('show');
+        }
+
+        function resetChecklist() {
+            items.forEach(item => item.checked = false);
+            saveData();
+            renderList();
+            updateProgress();
+            closeConfirm();
+        }
+
+        // ===== Alarm =====
+        function loadAlarm() {
+            try {
+                const raw = localStorage.getItem(ALARM_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    alarmTime = data.time || null;
+                    alarmFired = data.firedDate === todayStr();
+                }
+            } catch(e) {
+                alarmTime = null;
+            }
+            updateAlarmUI();
+        }
+
+        function saveAlarmData() {
+            localStorage.setItem(ALARM_KEY, JSON.stringify({
+                time: alarmTime,
+                firedDate: alarmFired ? todayStr() : null
+            }));
+        }
+
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function openAlarmModal() {
+            const modal = document.getElementById('alarmModal');
+            const timeInput = document.getElementById('alarmTime');
+            const removeBtn = document.getElementById('removeAlarmBtn');
+
+            if (alarmTime) {
+                timeInput.value = alarmTime;
+                removeBtn.style.display = 'inline-block';
+            } else {
+                timeInput.value = '09:00';
+                removeBtn.style.display = 'none';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function closeAlarmModal() {
+            document.getElementById('alarmModal').classList.remove('show');
+        }
+
+        function saveAlarm() {
+            const timeInput = document.getElementById('alarmTime');
+            alarmTime = timeInput.value;
+            alarmFired = false;
+            saveAlarmData();
+            updateAlarmUI();
+            closeAlarmModal();
+
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function removeAlarm() {
+            alarmTime = null;
+            alarmFired = false;
+            saveAlarmData();
+            updateAlarmUI();
+            closeAlarmModal();
+        }
+
+        function updateAlarmUI() {
+            const btn = document.getElementById('alarmBtn');
+            const banner = document.getElementById('alarmBanner');
+            const bannerText = document.getElementById('alarmBannerText');
+
+            if (alarmTime) {
+                btn.classList.add('active');
+                btn.textContent = 'Alarm: ' + formatTime12(alarmTime);
+                banner.classList.add('show');
+                bannerText.textContent = 'Alarm set for ' + formatTime12(alarmTime);
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = 'Alarm';
+                banner.classList.remove('show');
+            }
+        }
+
+        function formatTime12(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            const period = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+            return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+        }
+
+        // Alarm checker - runs every 15 seconds
+        function startAlarmChecker() {
+            setInterval(checkAlarm, 15000);
+            checkAlarm();
+        }
+
+        function checkAlarm() {
+            if (!alarmTime || alarmFired) return;
+
+            const now = new Date();
+            const [aH, aM] = alarmTime.split(':').map(Number);
+            const nowH = now.getHours();
+            const nowM = now.getMinutes();
+
+            if (nowH === aH && nowM === aM) {
+                fireAlarm();
+            }
+
+            // Reset fired flag when date changes
+            const storedData = JSON.parse(localStorage.getItem(ALARM_KEY) || '{}');
+            if (storedData.firedDate && storedData.firedDate !== todayStr()) {
+                alarmFired = false;
+                saveAlarmData();
+            }
+        }
+
+        function fireAlarm() {
+            alarmFired = true;
+            saveAlarmData();
+
+            // Show overlay
+            document.getElementById('alarmRingOverlay').classList.add('show');
+
+            // Play beep sound using Web Audio API
+            playBeep();
+
+            // Browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Daily Checklist', {
+                    body: 'Time to check your tasks!',
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">&#9745;</text></svg>'
+                });
+            }
+        }
+
+        function playBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const beepSequence = [
+                    { freq: 880, start: 0, dur: 0.15 },
+                    { freq: 880, start: 0.25, dur: 0.15 },
+                    { freq: 880, start: 0.5, dur: 0.15 },
+                    { freq: 1100, start: 0.75, dur: 0.3 },
+                ];
+
+                beepSequence.forEach(b => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = b.freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime + b.start);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + b.start + b.dur);
+                    osc.start(ctx.currentTime + b.start);
+                    osc.stop(ctx.currentTime + b.start + b.dur + 0.05);
+                });
+
+                alarmAudioCtx = ctx;
+            } catch(e) {
+                // Web Audio not supported
+            }
+        }
+
+        function dismissAlarm() {
+            document.getElementById('alarmRingOverlay').classList.remove('show');
+            if (alarmAudioCtx) {
+                alarmAudioCtx.close();
+                alarmAudioCtx = null;
+            }
+        }
+
+        // Close modals on overlay click
+        document.getElementById('alarmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAlarmModal();
+        });
+        document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeConfirm();
+        });
+        document.getElementById('alarmRingOverlay').addEventListener('click', function(e) {
+            if (e.target === this) dismissAlarm();
+        });
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
