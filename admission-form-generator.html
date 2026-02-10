@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입원초기평가 자동 생성기</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f0f4f8;
+            color: #1a202c;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #2b6cb0, #2c5282);
+            color: white;
+            padding: 20px 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 1.5em; font-weight: 700; }
+        .header p { font-size: 0.85em; opacity: 0.85; margin-top: 4px; }
+
+        .container {
+            display: flex;
+            gap: 24px;
+            max-width: 1400px;
+            margin: 24px auto;
+            padding: 0 24px;
+        }
+        .form-panel {
+            flex: 1;
+            min-width: 0;
+        }
+        .preview-panel {
+            flex: 1;
+            min-width: 0;
+            position: sticky;
+            top: 24px;
+            align-self: flex-start;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .card-header {
+            background: #edf2f7;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 0.95em;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header .badge {
+            background: #2b6cb0;
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .card-body { padding: 20px; }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-group label {
+            display: block;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group input[type="number"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66,153,225,0.15);
+        }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        .form-row .form-group { flex: 1; }
+
+        /* Toggle switches for PE findings */
+        .pe-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        .pe-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .pe-item-label {
+            font-size: 0.88em;
+            color: #2d3748;
+            flex: 1;
+        }
+        .pe-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-group {
+            display: flex;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #cbd5e0;
+        }
+        .toggle-btn {
+            padding: 4px 12px;
+            font-size: 0.78em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            background: white;
+            color: #718096;
+            transition: all 0.15s;
+        }
+        .toggle-btn:not(:last-child) { border-right: 1px solid #cbd5e0; }
+        .toggle-btn.active-pos { background: #48bb78; color: white; }
+        .toggle-btn.active-neg { background: #e53e3e; color: white; }
+        .toggle-btn.active-na { background: #a0aec0; color: white; }
+        .toggle-btn:hover { opacity: 0.85; }
+
+        .bilateral-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78em;
+            color: #4a5568;
+        }
+        .bilateral-row span { font-weight: 600; min-width: 14px; }
+
+        /* Direction selector */
+        .direction-select {
+            padding: 4px 8px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 0.82em;
+            background: white;
+        }
+
+        /* Preview */
+        .preview-content {
+            font-family: 'Consolas', 'D2Coding', 'Nanum Gothic Coding', monospace;
+            font-size: 0.88em;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            color: #1a202c;
+            min-height: 300px;
+            padding: 4px;
+        }
+        .preview-section-label {
+            color: #2b6cb0;
+            font-weight: 700;
+        }
+
+        .btn-copy {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2b6cb0, #2c5282);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-copy:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(43,108,176,0.3); }
+        .btn-copy:active { transform: translateY(0); }
+        .btn-copy.copied { background: linear-gradient(135deg, #38a169, #2f855a); }
+
+        .template-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .template-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #4a5568;
+            transition: all 0.2s;
+        }
+        .template-btn:hover { border-color: #4299e1; color: #2b6cb0; }
+        .template-btn.active { border-color: #2b6cb0; background: #ebf8ff; color: #2b6cb0; }
+
+        .divider { height: 1px; background: #e2e8f0; margin: 16px 0; }
+
+        @media (max-width: 900px) {
+            .container { flex-direction: column; }
+            .preview-panel { position: static; }
+        }
+
+        .sub-label {
+            font-size: 0.78em;
+            color: #718096;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
+        .custom-field-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .custom-field-row input { flex: 1; }
+        .btn-add-field {
+            padding: 6px 14px;
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82em;
+            color: #4a5568;
+            white-space: nowrap;
+        }
+        .btn-add-field:hover { background: #e2e8f0; }
+        .btn-remove {
+            padding: 2px 8px;
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.78em;
+            color: #c53030;
+        }
+
+        .info-text {
+            font-size: 0.78em;
+            color: #718096;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>입원초기평가 자동 생성기</h1>
+    <p>템플릿을 선택하고 환자 정보를 입력하면 입원초기평가 텍스트가 자동 생성됩니다</p>
+</div>
+
+<div class="container">
+    <!-- Left: Form Panel -->
+    <div class="form-panel">
+
+        <!-- Template Selection -->
+        <div class="card">
+            <div class="card-header">수술 템플릿 선택</div>
+            <div class="card-body">
+                <div class="template-selector" id="templateSelector">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Info -->
+        <div class="card">
+            <div class="card-header">기본 정보 <span class="badge">Onset / By</span></div>
+            <div class="card-body" id="basicInfoForm">
+                <!-- Populated by JS based on template -->
+            </div>
+        </div>
+
+        <!-- Physical Examination -->
+        <div class="card">
+            <div class="card-header">신체검사 소견 <span class="badge">P/E</span></div>
+            <div class="card-body">
+                <div class="pe-grid" id="peGrid">
+                    <!-- Populated by JS based on template -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessment -->
+        <div class="card">
+            <div class="card-header">진단 <span class="badge">Assessment</span></div>
+            <div class="card-body" id="assessmentForm">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Plan -->
+        <div class="card">
+            <div class="card-header">계획 <span class="badge">Plan</span></div>
+            <div class="card-body" id="planForm">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Goal -->
+        <div class="card">
+            <div class="card-header">목표 <span class="badge">Goal</span></div>
+            <div class="card-body" id="goalForm">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right: Preview Panel -->
+    <div class="preview-panel">
+        <div class="card">
+            <div class="card-header">생성된 입원초기평가 <span class="badge">미리보기</span></div>
+            <div class="card-body">
+                <div class="preview-content" id="previewContent"></div>
+            </div>
+        </div>
+        <button class="btn-copy" id="btnCopy" onclick="copyToClipboard()">클립보드에 복사</button>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// TEMPLATE DEFINITIONS
+// ============================================================
+const templates = {
+    nasal_bone_cr: {
+        name: '비골골절 Closed Reduction',
+        category: 'ENT',
+        basicFields: [
+            { id: 'onsetDate', label: 'Onset 날짜', type: 'date', placeholder: '수상일' },
+            { id: 'insuranceType', label: '보험 유형', type: 'select', options: ['상환', '건보', '산재', '자보', '일반'] },
+            { id: 'admissionDate', label: '입원(내원)일', type: 'date', placeholder: '입원일' },
+            { id: 'injuryMechanism', label: '수상 기전', type: 'text', default: '안면부 수상', placeholder: '예: 안면부 수상, 교통사고 후 안면부 수상, 폭행에 의한 안면부 수상' },
+            { id: 'erVisit', label: 'ER 경유 여부', type: 'select', options: ['본원 ER 경유', '타원 ER 경유', 'ER 경유 없음 (외래 직접)'] },
+            { id: 'imaging', label: '영상검사', type: 'select', options: ['Facial bone CT', 'Nasal bone X-ray (Waters view)', 'Facial bone CT + X-ray'] },
+            { id: 'anesthesia', label: '마취 방법', type: 'select', options: ['전신마취', '국소마취'] },
+            { id: 'surgeryTiming', label: '수술 시기', type: 'select', options: ['익일', '당일', '입원 2일차', '입원 3일차'] },
+        ],
+        peFindings: [
+            { id: 'facialSwelling', label: 'Facial swelling', type: 'toggle', default: '+' },
+            { id: 'nasalTenderness', label: 'Nasal bridge tenderness', type: 'toggle', default: '+' },
+            { id: 'ecchymosis', label: 'Ecchymosis and edema around nasal dorsum', type: 'toggle', default: '+' },
+            { id: 'nasalDeformity', label: 'External nasal deformity', type: 'toggle_with_direction', default: '+', directionLabel: 'deviation toward', directions: ['Rt', 'Lt', 'both'], defaultDirection: 'Rt' },
+            { id: 'nasalObstruction', label: 'Nasal obstruction', type: 'bilateral', default: { left: '-', right: '-' } },
+            { id: 'epistaxis', label: 'Epistaxis', type: 'bilateral', default: { left: '-', right: '-' } },
+            { id: 'septalHematoma', label: 'Septal hematoma', type: 'toggle', default: '-' },
+            { id: 'ocularMovement', label: 'Ocular movement', type: 'intact', default: 'intact' },
+            { id: 'diplopia', label: 'Diplopia', type: 'toggle', default: '-' },
+            { id: 'csfRhinorrhea', label: 'CSF rhinorrhea', type: 'toggle', default: '-' },
+            { id: 'infraorbitalSensory', label: 'Sensory: infraorbital area', type: 'intact', default: 'intact' },
+            { id: 'vitalSigns', label: 'V/S', type: 'intact', default: 'stable', options: ['stable', 'unstable'] },
+            { id: 'mentalStatus', label: 'Mental status', type: 'intact', default: 'alert', options: ['alert', 'drowsy', 'stupor'] },
+        ],
+        assessment: { default: 'Fracture, nasal bone', editable: true },
+        plan: {
+            items: [
+                { id: 'surgeryPlan', default: '{anesthesia} 하 Closed reduction 예정', auto: true },
+                { id: 'fasting', default: '수술 전 금식', editable: false },
+                { id: 'postOp', default: '수술 후 nasal packing 및 external splint 유지 계획', editable: true },
+                { id: 'medication', default: '항생제, 진통제 투여 예정', editable: true },
+            ]
+        },
+        goal: { default: '안전한 비골 골절의 정복 후 퇴원' },
+
+        generateOnset(data) {
+            if (!data.onsetDate) return 'Onset: ____-__-__';
+            return `Onset: ${data.onsetDate}`;
+        },
+
+        generateBy(data) {
+            const insurance = data.insuranceType || '상환';
+            const admDate = data.admissionDate ? formatDateShort(data.admissionDate) : '__/__';
+            const mechanism = data.injuryMechanism || '안면부 수상';
+            const anesthesia = data.anesthesia || '전신마취';
+            const timing = data.surgeryTiming || '익일';
+            const imaging = data.imaging || 'Facial bone CT';
+
+            let erPart = '';
+            if (data.erVisit === '본원 ER 경유') {
+                erPart = `본원 ER 경유하여 시행한 ${imaging} 상 비골골절 의심되어 본원 외래 통하여`;
+            } else if (data.erVisit === '타원 ER 경유') {
+                erPart = `타원 ER 경유 후 본원 외래 방문하여 시행한 ${imaging} 상 비골골절 의심되어`;
+            } else {
+                erPart = `본원 외래 방문하여 시행한 ${imaging} 상 비골골절 의심되어`;
+            }
+
+            return `By: ${insurance} ${admDate} ~ ${mechanism} 후 ${erPart} ${timing} ${anesthesia} 하 Closed reduction 위하여 내원함.`;
+        },
+
+        generatePE(peData) {
+            const lines = [];
+
+            // Facial swelling + tenderness on same line
+            const swelling = peData.facialSwelling === '+' ? '(+)' : '(-)';
+            const tenderness = peData.nasalTenderness === '+' ? '(+)' : '(-)';
+            lines.push(`Facial swelling ${swelling}, nasal bridge tenderness ${tenderness}`);
+
+            // Ecchymosis
+            if (peData.ecchymosis === '+') {
+                lines.push('Ecchymosis and edema around nasal dorsum');
+            } else {
+                lines.push('No ecchymosis or edema around nasal dorsum');
+            }
+
+            // Nasal deformity
+            if (peData.nasalDeformity === '+') {
+                const dir = peData.nasalDeformityDirection || 'Rt';
+                lines.push(`External nasal deformity: deviation toward ${dir}.`);
+            } else {
+                lines.push('No external nasal deformity');
+            }
+
+            // Nasal obstruction (bilateral)
+            const noL = peData.nasalObstruction_left || '-';
+            const noR = peData.nasalObstruction_right || '-';
+            const epL = peData.epistaxis_left || '-';
+            const epR = peData.epistaxis_right || '-';
+            lines.push(`Nasal obstruction (${noL}/${noR}), epistaxis (${epL}/${epR})`);
+
+            // Septal hematoma
+            if (peData.septalHematoma === '+') {
+                lines.push('Septal hematoma observed');
+            } else {
+                lines.push('No septal hematoma observed');
+            }
+
+            // Ocular movement + diplopia
+            const ocular = peData.ocularMovement || 'intact';
+            const diplo = peData.diplopia === '+' ? '(+)' : '(-)';
+            lines.push(`Ocular movement ${ocular}, diplopia ${diplo}`);
+
+            // CSF rhinorrhea
+            if (peData.csfRhinorrhea === '+') {
+                lines.push('CSF rhinorrhea noted');
+            } else {
+                lines.push('No CSF rhinorrhea');
+            }
+
+            // Infraorbital sensory
+            const sensory = peData.infraorbitalSensory || 'intact';
+            lines.push(`Sensory: infraorbital area ${sensory}`);
+
+            // V/S + mental
+            const vs = peData.vitalSigns || 'stable';
+            const mental = peData.mentalStatus || 'alert';
+            lines.push(`V/S ${vs}, patient ${mental}`);
+
+            return lines.join('\n');
+        },
+
+        generateAssessment(data) {
+            return data.assessment || 'Fracture, nasal bone';
+        },
+
+        generatePlan(data) {
+            const anesthesia = data.anesthesia || '전신마취';
+            const lines = [];
+            lines.push(`${anesthesia} 하 Closed reduction 예정`);
+            lines.push('수술 전 금식');
+            lines.push(data.planPostOp || '수술 후 nasal packing 및 external splint 유지 계획');
+            lines.push(data.planMedication || '항생제, 진통제 투여 예정');
+            if (data.planExtra) {
+                data.planExtra.forEach(line => { if (line.trim()) lines.push(line); });
+            }
+            return lines.join('\n');
+        },
+
+        generateGoal(data) {
+            return data.goal || '안전한 비골 골절의 정복 후 퇴원';
+        }
+    },
+
+    septoplasty: {
+        name: '비중격만곡증 Septoplasty',
+        category: 'ENT',
+        basicFields: [
+            { id: 'onsetDate', label: 'Onset 날짜 (증상 시작)', type: 'date', placeholder: '증상 시작일 또는 진단일' },
+            { id: 'insuranceType', label: '보험 유형', type: 'select', options: ['상환', '건보', '산재', '자보', '일반'] },
+            { id: 'admissionDate', label: '입원(내원)일', type: 'date', placeholder: '입원일' },
+            { id: 'chiefComplaint', label: '주소 (Chief Complaint)', type: 'text', default: '만성 비폐색', placeholder: '예: 만성 비폐색, 코막힘, 수면 장애' },
+            { id: 'duration', label: '증상 기간', type: 'text', default: '수년간', placeholder: '예: 수개월간, 수년간, 3년간' },
+            { id: 'imaging', label: '영상검사', type: 'select', options: ['PNS CT', 'Facial bone CT', 'PNS X-ray'] },
+            { id: 'anesthesia', label: '마취 방법', type: 'select', options: ['전신마취', '국소마취'] },
+            { id: 'surgeryTiming', label: '수술 시기', type: 'select', options: ['익일', '당일', '입원 2일차'] },
+        ],
+        peFindings: [
+            { id: 'septalDeviation', label: 'Septal deviation', type: 'toggle_with_direction', default: '+', directionLabel: 'toward', directions: ['Rt', 'Lt'], defaultDirection: 'Lt' },
+            { id: 'nasalObstruction', label: 'Nasal obstruction', type: 'bilateral', default: { left: '-', right: '+' } },
+            { id: 'inferiorTurbinate', label: 'Inferior turbinate hypertrophy', type: 'bilateral', default: { left: '-', right: '-' } },
+            { id: 'nasalDischarge', label: 'Nasal discharge', type: 'bilateral', default: { left: '-', right: '-' } },
+            { id: 'epistaxis', label: 'Epistaxis', type: 'bilateral', default: { left: '-', right: '-' } },
+            { id: 'anosmia', label: 'Anosmia/Hyposmia', type: 'toggle', default: '-' },
+            { id: 'snoring', label: 'Snoring', type: 'toggle', default: '-' },
+            { id: 'vitalSigns', label: 'V/S', type: 'intact', default: 'stable', options: ['stable', 'unstable'] },
+            { id: 'mentalStatus', label: 'Mental status', type: 'intact', default: 'alert', options: ['alert', 'drowsy', 'stupor'] },
+        ],
+        assessment: { default: 'Deviated nasal septum', editable: true },
+        plan: {
+            items: [
+                { id: 'surgeryPlan', default: '{anesthesia} 하 Septoplasty 예정', auto: true },
+                { id: 'fasting', default: '수술 전 금식', editable: false },
+                { id: 'postOp', default: '수술 후 nasal packing 유지 계획 (1-2일)', editable: true },
+                { id: 'medication', default: '항생제, 진통제 투여 예정', editable: true },
+            ]
+        },
+        goal: { default: '비중격 교정 후 비폐색 증상 개선 및 퇴원' },
+
+        generateOnset(data) {
+            if (!data.onsetDate) return 'Onset: ____-__-__';
+            return `Onset: ${data.onsetDate}`;
+        },
+
+        generateBy(data) {
+            const insurance = data.insuranceType || '상환';
+            const admDate = data.admissionDate ? formatDateShort(data.admissionDate) : '__/__';
+            const cc = data.chiefComplaint || '만성 비폐색';
+            const duration = data.duration || '수년간';
+            const anesthesia = data.anesthesia || '전신마취';
+            const timing = data.surgeryTiming || '익일';
+            const imaging = data.imaging || 'PNS CT';
+
+            return `By: ${insurance} ${admDate} ~ ${duration} ${cc} 호소하여 본원 외래 방문, ${imaging} 상 비중격만곡 확인되어 ${timing} ${anesthesia} 하 Septoplasty 위하여 내원함.`;
+        },
+
+        generatePE(peData) {
+            const lines = [];
+
+            if (peData.septalDeviation === '+') {
+                const dir = peData.septalDeviationDirection || 'Lt';
+                lines.push(`Septal deviation toward ${dir}.`);
+            } else {
+                lines.push('No significant septal deviation');
+            }
+
+            const noL = peData.nasalObstruction_left || '-';
+            const noR = peData.nasalObstruction_right || '-';
+            lines.push(`Nasal obstruction (${noL}/${noR})`);
+
+            const itL = peData.inferiorTurbinate_left || '-';
+            const itR = peData.inferiorTurbinate_right || '-';
+            lines.push(`Inferior turbinate hypertrophy (${itL}/${itR})`);
+
+            const ndL = peData.nasalDischarge_left || '-';
+            const ndR = peData.nasalDischarge_right || '-';
+            lines.push(`Nasal discharge (${ndL}/${ndR})`);
+
+            const epL = peData.epistaxis_left || '-';
+            const epR = peData.epistaxis_right || '-';
+            lines.push(`Epistaxis (${epL}/${epR})`);
+
+            lines.push(`Anosmia/Hyposmia ${peData.anosmia === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Snoring ${peData.snoring === '+' ? '(+)' : '(-)'}`);
+
+            const vs = peData.vitalSigns || 'stable';
+            const mental = peData.mentalStatus || 'alert';
+            lines.push(`V/S ${vs}, patient ${mental}`);
+
+            return lines.join('\n');
+        },
+
+        generateAssessment(data) {
+            return data.assessment || 'Deviated nasal septum';
+        },
+
+        generatePlan(data) {
+            const anesthesia = data.anesthesia || '전신마취';
+            const lines = [];
+            lines.push(`${anesthesia} 하 Septoplasty 예정`);
+            lines.push('수술 전 금식');
+            lines.push(data.planPostOp || '수술 후 nasal packing 유지 계획 (1-2일)');
+            lines.push(data.planMedication || '항생제, 진통제 투여 예정');
+            if (data.planExtra) {
+                data.planExtra.forEach(line => { if (line.trim()) lines.push(line); });
+            }
+            return lines.join('\n');
+        },
+
+        generateGoal(data) {
+            return data.goal || '비중격 교정 후 비폐색 증상 개선 및 퇴원';
+        }
+    },
+
+    tonsillectomy: {
+        name: '편도절제술 Tonsillectomy',
+        category: 'ENT',
+        basicFields: [
+            { id: 'onsetDate', label: 'Onset 날짜', type: 'date', placeholder: '증상 시작일' },
+            { id: 'insuranceType', label: '보험 유형', type: 'select', options: ['상환', '건보', '산재', '자보', '일반'] },
+            { id: 'admissionDate', label: '입원(내원)일', type: 'date', placeholder: '입원일' },
+            { id: 'chiefComplaint', label: '주소 (Chief Complaint)', type: 'text', default: '반복적인 편도염', placeholder: '예: 반복적인 편도염, 편도비대, 수면무호흡' },
+            { id: 'frequency', label: '편도염 빈도', type: 'text', default: '연 4-5회 이상', placeholder: '예: 연 4-5회 이상, 연 7회 이상' },
+            { id: 'anesthesia', label: '마취 방법', type: 'select', options: ['전신마취'] },
+            { id: 'surgeryTiming', label: '수술 시기', type: 'select', options: ['익일', '당일', '입원 2일차'] },
+            { id: 'includeAdenoid', label: '아데노이드 절제 포함', type: 'select', options: ['아니오', '예 (Adenotonsillectomy)'] },
+        ],
+        peFindings: [
+            { id: 'tonsilSize', label: 'Tonsil size (grade)', type: 'intact', default: 'Grade III', options: ['Grade I', 'Grade II', 'Grade III', 'Grade IV'] },
+            { id: 'tonsilErythema', label: 'Tonsillar erythema', type: 'toggle', default: '+' },
+            { id: 'tonsilExudate', label: 'Tonsillar exudate', type: 'toggle', default: '-' },
+            { id: 'cervicalLN', label: 'Cervical lymphadenopathy', type: 'toggle', default: '-' },
+            { id: 'oropharynx', label: 'Oropharyngeal narrowing', type: 'toggle', default: '+' },
+            { id: 'uvulaDeviation', label: 'Uvula deviation', type: 'toggle', default: '-' },
+            { id: 'trismus', label: 'Trismus', type: 'toggle', default: '-' },
+            { id: 'vitalSigns', label: 'V/S', type: 'intact', default: 'stable', options: ['stable', 'unstable'] },
+            { id: 'mentalStatus', label: 'Mental status', type: 'intact', default: 'alert', options: ['alert', 'drowsy', 'stupor'] },
+        ],
+        assessment: { default: 'Chronic tonsillitis, recurrent', editable: true },
+        plan: {
+            items: [
+                { id: 'surgeryPlan', default: '{anesthesia} 하 Tonsillectomy 예정', auto: true },
+                { id: 'fasting', default: '수술 전 금식', editable: false },
+                { id: 'postOp', default: '수술 후 연식(soft diet) 유지 계획', editable: true },
+                { id: 'medication', default: '항생제, 진통제 투여 예정', editable: true },
+            ]
+        },
+        goal: { default: '안전한 편도절제 후 경구 섭취 가능 시 퇴원' },
+
+        generateOnset(data) {
+            if (!data.onsetDate) return 'Onset: ____-__-__';
+            return `Onset: ${data.onsetDate}`;
+        },
+
+        generateBy(data) {
+            const insurance = data.insuranceType || '상환';
+            const admDate = data.admissionDate ? formatDateShort(data.admissionDate) : '__/__';
+            const cc = data.chiefComplaint || '반복적인 편도염';
+            const freq = data.frequency || '연 4-5회 이상';
+            const anesthesia = data.anesthesia || '전신마취';
+            const timing = data.surgeryTiming || '익일';
+            const includeAdenoid = data.includeAdenoid === '예 (Adenotonsillectomy)';
+            const surgeryName = includeAdenoid ? 'Adenotonsillectomy' : 'Tonsillectomy';
+
+            return `By: ${insurance} ${admDate} ~ ${cc} (${freq}) 호소하여 본원 외래 방문, ${timing} ${anesthesia} 하 ${surgeryName} 위하여 내원함.`;
+        },
+
+        generatePE(peData) {
+            const lines = [];
+            lines.push(`Tonsil size: ${peData.tonsilSize || 'Grade III'}`);
+            lines.push(`Tonsillar erythema ${peData.tonsilErythema === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Tonsillar exudate ${peData.tonsilExudate === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Cervical lymphadenopathy ${peData.cervicalLN === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Oropharyngeal narrowing ${peData.oropharynx === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Uvula deviation ${peData.uvulaDeviation === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Trismus ${peData.trismus === '+' ? '(+)' : '(-)'}`);
+
+            const vs = peData.vitalSigns || 'stable';
+            const mental = peData.mentalStatus || 'alert';
+            lines.push(`V/S ${vs}, patient ${mental}`);
+            return lines.join('\n');
+        },
+
+        generateAssessment(data) {
+            return data.assessment || 'Chronic tonsillitis, recurrent';
+        },
+
+        generatePlan(data) {
+            const anesthesia = data.anesthesia || '전신마취';
+            const includeAdenoid = data.includeAdenoid === '예 (Adenotonsillectomy)';
+            const surgeryName = includeAdenoid ? 'Adenotonsillectomy' : 'Tonsillectomy';
+            const lines = [];
+            lines.push(`${anesthesia} 하 ${surgeryName} 예정`);
+            lines.push('수술 전 금식');
+            lines.push(data.planPostOp || '수술 후 연식(soft diet) 유지 계획');
+            lines.push(data.planMedication || '항생제, 진통제 투여 예정');
+            if (data.planExtra) {
+                data.planExtra.forEach(line => { if (line.trim()) lines.push(line); });
+            }
+            return lines.join('\n');
+        },
+
+        generateGoal(data) {
+            return data.goal || '안전한 편도절제 후 경구 섭취 가능 시 퇴원';
+        }
+    }
+};
+
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+let currentTemplate = 'nasal_bone_cr';
+let formData = {};
+let peData = {};
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+function formatDateShort(dateStr) {
+    if (!dateStr) return '__/__';
+    const d = new Date(dateStr);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${mm}/${dd}`;
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function renderTemplateSelector() {
+    const container = document.getElementById('templateSelector');
+    container.innerHTML = '';
+    Object.entries(templates).forEach(([key, tmpl]) => {
+        const btn = document.createElement('button');
+        btn.className = `template-btn ${key === currentTemplate ? 'active' : ''}`;
+        btn.textContent = tmpl.name;
+        btn.onclick = () => {
+            currentTemplate = key;
+            formData = {};
+            peData = {};
+            initForm();
+        };
+        container.appendChild(btn);
+    });
+}
+
+function renderBasicInfo() {
+    const tmpl = templates[currentTemplate];
+    const container = document.getElementById('basicInfoForm');
+    container.innerHTML = '';
+
+    // Group fields in rows of 2 where appropriate
+    const fields = tmpl.basicFields;
+    let i = 0;
+    while (i < fields.length) {
+        const f1 = fields[i];
+        const f2 = (i + 1 < fields.length && canPairFields(f1, fields[i+1])) ? fields[i+1] : null;
+
+        if (f2) {
+            const row = document.createElement('div');
+            row.className = 'form-row';
+            row.appendChild(createFormGroup(f1));
+            row.appendChild(createFormGroup(f2));
+            container.appendChild(row);
+            i += 2;
+        } else {
+            container.appendChild(createFormGroup(f1));
+            i++;
+        }
+    }
+}
+
+function canPairFields(f1, f2) {
+    const shortTypes = ['date', 'select'];
+    return shortTypes.includes(f1.type) && shortTypes.includes(f2.type);
+}
+
+function createFormGroup(field) {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+
+    const label = document.createElement('label');
+    label.textContent = field.label;
+    group.appendChild(label);
+
+    let input;
+    if (field.type === 'select') {
+        input = document.createElement('select');
+        field.options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt;
+            o.textContent = opt;
+            input.appendChild(o);
+        });
+        input.value = formData[field.id] || field.options[0];
+    } else if (field.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.value = formData[field.id] || field.default || '';
+        input.placeholder = field.placeholder || '';
+    } else {
+        input = document.createElement('input');
+        input.type = field.type;
+        input.value = formData[field.id] || field.default || '';
+        input.placeholder = field.placeholder || '';
+    }
+
+    input.addEventListener('input', (e) => {
+        formData[field.id] = e.target.value;
+        updatePreview();
+    });
+    input.addEventListener('change', (e) => {
+        formData[field.id] = e.target.value;
+        updatePreview();
+    });
+
+    // Initialize formData
+    if (!(field.id in formData)) {
+        formData[field.id] = input.value || field.default || (field.options ? field.options[0] : '');
+    }
+
+    group.appendChild(input);
+    return group;
+}
+
+function renderPE() {
+    const tmpl = templates[currentTemplate];
+    const container = document.getElementById('peGrid');
+    container.innerHTML = '';
+
+    tmpl.peFindings.forEach(finding => {
+        const item = document.createElement('div');
+        item.className = 'pe-item';
+
+        const label = document.createElement('div');
+        label.className = 'pe-item-label';
+        label.textContent = finding.label;
+        item.appendChild(label);
+
+        const controls = document.createElement('div');
+        controls.className = 'pe-item-controls';
+
+        if (finding.type === 'toggle') {
+            controls.appendChild(createToggle(finding.id, finding.default));
+        } else if (finding.type === 'toggle_with_direction') {
+            controls.appendChild(createToggle(finding.id, finding.default));
+            const dirSelect = document.createElement('select');
+            dirSelect.className = 'direction-select';
+            finding.directions.forEach(d => {
+                const o = document.createElement('option');
+                o.value = d;
+                o.textContent = d;
+                dirSelect.appendChild(o);
+            });
+            dirSelect.value = peData[finding.id + 'Direction'] || finding.defaultDirection;
+            dirSelect.addEventListener('change', (e) => {
+                peData[finding.id + 'Direction'] = e.target.value;
+                updatePreview();
+            });
+            if (!(finding.id + 'Direction' in peData)) {
+                peData[finding.id + 'Direction'] = finding.defaultDirection;
+            }
+            controls.appendChild(dirSelect);
+        } else if (finding.type === 'bilateral') {
+            const biRow = document.createElement('div');
+            biRow.className = 'bilateral-row';
+
+            const lLabel = document.createElement('span');
+            lLabel.textContent = 'L';
+            biRow.appendChild(lLabel);
+            biRow.appendChild(createToggle(finding.id + '_left', finding.default.left));
+
+            const rLabel = document.createElement('span');
+            rLabel.textContent = 'R';
+            rLabel.style.marginLeft = '4px';
+            biRow.appendChild(rLabel);
+            biRow.appendChild(createToggle(finding.id + '_right', finding.default.right));
+
+            controls.appendChild(biRow);
+        } else if (finding.type === 'intact') {
+            const opts = finding.options || ['intact', 'impaired'];
+            const select = document.createElement('select');
+            select.className = 'direction-select';
+            opts.forEach(o => {
+                const opt = document.createElement('option');
+                opt.value = o;
+                opt.textContent = o;
+                select.appendChild(opt);
+            });
+            select.value = peData[finding.id] || finding.default;
+            select.addEventListener('change', (e) => {
+                peData[finding.id] = e.target.value;
+                updatePreview();
+            });
+            if (!(finding.id in peData)) {
+                peData[finding.id] = finding.default;
+            }
+            controls.appendChild(select);
+        }
+
+        item.appendChild(controls);
+        container.appendChild(item);
+    });
+}
+
+function createToggle(id, defaultVal) {
+    const group = document.createElement('div');
+    group.className = 'toggle-group';
+
+    const btnPos = document.createElement('button');
+    btnPos.className = `toggle-btn ${defaultVal === '+' ? 'active-pos' : ''}`;
+    btnPos.textContent = '(+)';
+    btnPos.type = 'button';
+
+    const btnNeg = document.createElement('button');
+    btnNeg.className = `toggle-btn ${defaultVal === '-' ? 'active-neg' : ''}`;
+    btnNeg.textContent = '(-)';
+    btnNeg.type = 'button';
+
+    if (!(id in peData)) {
+        peData[id] = defaultVal;
+    }
+
+    function updateButtons() {
+        btnPos.className = `toggle-btn ${peData[id] === '+' ? 'active-pos' : ''}`;
+        btnNeg.className = `toggle-btn ${peData[id] === '-' ? 'active-neg' : ''}`;
+    }
+
+    btnPos.onclick = () => { peData[id] = '+'; updateButtons(); updatePreview(); };
+    btnNeg.onclick = () => { peData[id] = '-'; updateButtons(); updatePreview(); };
+
+    group.appendChild(btnPos);
+    group.appendChild(btnNeg);
+    return group;
+}
+
+function renderAssessment() {
+    const tmpl = templates[currentTemplate];
+    const container = document.getElementById('assessmentForm');
+    container.innerHTML = '';
+
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    const label = document.createElement('label');
+    label.textContent = '진단명 (Assessment)';
+    group.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = formData.assessment || tmpl.assessment.default;
+    input.addEventListener('input', (e) => {
+        formData.assessment = e.target.value;
+        updatePreview();
+    });
+    if (!formData.assessment) formData.assessment = tmpl.assessment.default;
+    group.appendChild(input);
+    container.appendChild(group);
+}
+
+function renderPlan() {
+    const tmpl = templates[currentTemplate];
+    const container = document.getElementById('planForm');
+    container.innerHTML = '';
+
+    // Post-op plan
+    const postOpGroup = document.createElement('div');
+    postOpGroup.className = 'form-group';
+    const postOpLabel = document.createElement('label');
+    postOpLabel.textContent = '수술 후 계획';
+    postOpGroup.appendChild(postOpLabel);
+    const postOpInput = document.createElement('input');
+    postOpInput.type = 'text';
+    const defaultPostOp = tmpl.plan.items.find(i => i.id === 'postOp')?.default || '';
+    postOpInput.value = formData.planPostOp || defaultPostOp;
+    postOpInput.addEventListener('input', (e) => {
+        formData.planPostOp = e.target.value;
+        updatePreview();
+    });
+    if (!formData.planPostOp) formData.planPostOp = defaultPostOp;
+    postOpGroup.appendChild(postOpInput);
+    container.appendChild(postOpGroup);
+
+    // Medication
+    const medGroup = document.createElement('div');
+    medGroup.className = 'form-group';
+    const medLabel = document.createElement('label');
+    medLabel.textContent = '약물 투여 계획';
+    medGroup.appendChild(medLabel);
+    const medInput = document.createElement('input');
+    medInput.type = 'text';
+    const defaultMed = tmpl.plan.items.find(i => i.id === 'medication')?.default || '';
+    medInput.value = formData.planMedication || defaultMed;
+    medInput.addEventListener('input', (e) => {
+        formData.planMedication = e.target.value;
+        updatePreview();
+    });
+    if (!formData.planMedication) formData.planMedication = defaultMed;
+    medGroup.appendChild(medInput);
+    container.appendChild(medGroup);
+
+    // Extra plan lines
+    const extraDiv = document.createElement('div');
+    extraDiv.className = 'form-group';
+    const extraLabel = document.createElement('label');
+    extraLabel.textContent = '추가 계획';
+    extraLabel.innerHTML += '<span class="sub-label">(줄바꿈으로 구분)</span>';
+    extraDiv.appendChild(extraLabel);
+    const extraInput = document.createElement('textarea');
+    extraInput.placeholder = '추가 계획 사항이 있으면 입력하세요';
+    extraInput.value = (formData.planExtra || []).join('\n');
+    extraInput.addEventListener('input', (e) => {
+        formData.planExtra = e.target.value.split('\n');
+        updatePreview();
+    });
+    extraDiv.appendChild(extraInput);
+    container.appendChild(extraDiv);
+}
+
+function renderGoal() {
+    const tmpl = templates[currentTemplate];
+    const container = document.getElementById('goalForm');
+    container.innerHTML = '';
+
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    const label = document.createElement('label');
+    label.textContent = '치료 목표';
+    group.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = formData.goal || tmpl.goal.default;
+    input.addEventListener('input', (e) => {
+        formData.goal = e.target.value;
+        updatePreview();
+    });
+    if (!formData.goal) formData.goal = tmpl.goal.default;
+    group.appendChild(input);
+    container.appendChild(group);
+}
+
+// ============================================================
+// PREVIEW
+// ============================================================
+function updatePreview() {
+    const tmpl = templates[currentTemplate];
+    const allData = { ...formData, ...peData };
+
+    const sections = [];
+
+    // Onset
+    sections.push(tmpl.generateOnset(allData));
+    sections.push('');
+
+    // By (History)
+    sections.push(tmpl.generateBy(allData));
+    sections.push('');
+
+    // PE
+    sections.push(tmpl.generatePE(peData));
+    sections.push('');
+
+    // Assessment
+    sections.push(tmpl.generateAssessment(allData));
+
+    // Plan
+    sections.push(tmpl.generatePlan(allData));
+    sections.push('');
+
+    // Goal
+    sections.push(tmpl.generateGoal(allData));
+
+    document.getElementById('previewContent').textContent = sections.join('\n');
+}
+
+// ============================================================
+// COPY
+// ============================================================
+function copyToClipboard() {
+    const text = document.getElementById('previewContent').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btnCopy');
+        btn.textContent = '복사 완료!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = '클립보드에 복사';
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const btn = document.getElementById('btnCopy');
+        btn.textContent = '복사 완료!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = '클립보드에 복사';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function initForm() {
+    renderTemplateSelector();
+    renderBasicInfo();
+    renderPE();
+    renderAssessment();
+    renderPlan();
+    renderGoal();
+    updatePreview();
+}
+
+initForm();
+</script>
+
+</body>
+</html>
