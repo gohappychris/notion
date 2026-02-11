@@ -359,7 +359,6 @@ const templates = {
         category: 'ENT',
         basicFields: [
             { id: 'onsetDate', label: 'Onset 날짜', type: 'date', placeholder: '수상일' },
-            { id: 'insuranceType', label: '보험 유형', type: 'select', options: ['상환', '건보', '산재', '자보', '일반'] },
             { id: 'admissionDate', label: '입원(내원)일', type: 'date', placeholder: '입원일' },
             { id: 'injuryMechanism', label: '수상 기전', type: 'text', default: '안면부 수상', placeholder: '예: 안면부 수상, 교통사고 후 안면부 수상, 폭행에 의한 안면부 수상' },
             { id: 'erVisit', label: 'ER 경유 여부', type: 'select', options: ['본원 ER 경유', '타원 ER 경유', 'ER 경유 없음 (외래 직접)'] },
@@ -399,7 +398,6 @@ const templates = {
         },
 
         generateBy(data) {
-            const insurance = data.insuranceType || '상환';
             const admDate = data.admissionDate ? formatDateShort(data.admissionDate) : '__/__';
             const mechanism = data.injuryMechanism || '안면부 수상';
             const anesthesia = data.anesthesia || '전신마취';
@@ -415,7 +413,7 @@ const templates = {
                 erPart = `본원 외래 방문하여 시행한 ${imaging} 상 비골골절 의심되어`;
             }
 
-            return `By: ${insurance} ${admDate} ~ ${mechanism} 후 ${erPart} ${timing} ${anesthesia} 하 Closed reduction 위하여 내원함.`;
+            return `By: 상환 ${admDate} ~ ${mechanism} 후 ${erPart} ${timing} ${anesthesia} 하 Closed reduction 위하여 내원함.`;
         },
 
         generatePE(peData) {
@@ -488,8 +486,8 @@ const templates = {
             const lines = [];
             lines.push(`${anesthesia} 하 Closed reduction 예정`);
             lines.push('수술 전 금식');
-            lines.push(data.planPostOp || '수술 후 nasal packing 및 external splint 유지 계획');
-            lines.push(data.planMedication || '항생제, 진통제 투여 예정');
+            lines.push(data.plan_postOp || '수술 후 nasal packing 및 external splint 유지 계획');
+            lines.push(data.plan_medication || '항생제, 진통제 투여 예정');
             if (data.planExtra) {
                 data.planExtra.forEach(line => { if (line.trim()) lines.push(line); });
             }
@@ -498,6 +496,116 @@ const templates = {
 
         generateGoal(data) {
             return data.goal || '안전한 비골 골절의 정복 후 퇴원';
+        }
+    },
+
+    skin_cancer_graft: {
+        name: '피부암 Wide Excision & Skin Graft',
+        category: 'PS',
+        basicFields: [
+            { id: 'onsetDuration', label: 'Onset (증상 인지 시기)', type: 'text', default: '2개월 전', placeholder: '예: 2개월 전, 6개월 전, 1년 전' },
+            { id: 'admissionDate', label: '입원(내원)일', type: 'date', placeholder: '입원일' },
+            { id: 'lesionSymptom', label: '병변 증상', type: 'select', options: ['asymptomatic', 'symptomatic', 'painful', 'pruritic', 'bleeding'] },
+            { id: 'lesionDescription', label: '병변 기술', type: 'text', default: 'skin-colored thickened plaque', placeholder: '예: skin-colored thickened plaque, pigmented nodule, ulcerated mass' },
+            { id: 'lesionSide', label: '병변 측', type: 'select', options: ['Lt.', 'Rt.', 'midline'] },
+            { id: 'lesionLocation', label: '병변 부위', type: 'text', default: 'cheek', placeholder: '예: cheek, forehead, nose, scalp, ear, lower lip' },
+            { id: 'biopsyDate', label: '조직검사 시행일', type: 'text', default: '2026.03', placeholder: '예: 2026.03' },
+            { id: 'biopsyDept', label: '조직검사 시행 부서', type: 'select', options: ['본원 피부과', '본원 외래', '타원'] },
+            { id: 'biopsyType', label: '조직검사 유형', type: 'select', options: ['Punch Bx.', 'Incisional Bx.', 'Excisional Bx.', 'Shave Bx.'] },
+            { id: 'diagnosis', label: '병리 진단', type: 'select', options: ['Squamous cell carcinoma', 'Basal cell carcinoma', 'Malignant melanoma', "Bowen's disease", 'Merkel cell carcinoma', 'Dermatofibrosarcoma protuberans'] },
+            { id: 'anesthesia', label: '마취 방법', type: 'select', options: ['국소마취', '전신마취'] },
+            { id: 'surgeryType', label: '수술 방법', type: 'select', options: ['Wide excision & FTSG', 'Wide excision & STSG', 'Wide excision & local flap', 'Wide excision only'] },
+            { id: 'surgeryTiming', label: '수술 시기', type: 'select', options: ['익일', '당일', '입원 2일차', '입원 3일차'] },
+        ],
+        peFindings: [
+            { id: 'lesionSize', label: 'Lesion size (cm)', type: 'text_input', default: '2 x 2', placeholder: '예: 2 x 2' },
+            { id: 'lesionAppearance', label: 'Lesion appearance', type: 'text_input', default: 'skin-colored thickened plaque, well-demarcated', placeholder: '예: skin-colored thickened plaque, well-demarcated' },
+            { id: 'ulceration', label: 'Ulceration', type: 'toggle', default: '-' },
+            { id: 'tenderness', label: 'Tenderness', type: 'toggle', default: '-' },
+            { id: 'bleeding', label: 'Bleeding', type: 'toggle', default: '-' },
+            { id: 'skinFixation', label: 'Fixation to underlying tissue', type: 'toggle', default: '-' },
+            { id: 'regionalLN', label: 'Regional lymphadenopathy', type: 'toggle', default: '-' },
+            { id: 'satelliteLesion', label: 'Satellite lesion', type: 'toggle', default: '-' },
+            { id: 'vitalSigns', label: 'V/S', type: 'intact', default: 'stable', options: ['stable', 'unstable'] },
+            { id: 'mentalStatus', label: 'Mental status', type: 'intact', default: 'alert', options: ['alert', 'drowsy', 'stupor'] },
+        ],
+        assessment: { default: 'Squamous cell carcinoma, cheek, Lt.', editable: true },
+        plan: {
+            items: [
+                { id: 'surgeryPlan', default: '{surgeryType} 예정', auto: true },
+                { id: 'antibiotics', default: 'IV antibiotics', editable: true },
+                { id: 'painControl', default: 'Pain control', editable: true },
+                { id: 'woundMgmt', default: 'Wound management', editable: true },
+            ]
+        },
+        goal: { default: '피부암의 안전한 절제 및 퇴원\n공여부와 수혜부의 안전한 회복 및 퇴원' },
+
+        generateOnset(data) {
+            return `Onset: ${data.onsetDuration || '__ 전'}`;
+        },
+
+        generateBy(data) {
+            const admDate = data.admissionDate ? formatDateShort(data.admissionDate) : '__/__';
+            const symptom = data.lesionSymptom || 'asymptomatic';
+            const desc = data.lesionDescription || 'skin-colored thickened plaque';
+            const side = data.lesionSide || 'Lt.';
+            const location = data.lesionLocation || 'cheek';
+            const bxDate = data.biopsyDate || '____.__';
+            const bxDept = data.biopsyDept || '본원 피부과';
+            const bxType = data.biopsyType || 'Punch Bx.';
+            const dx = data.diagnosis || 'Squamous cell carcinoma';
+            const anesthesia = data.anesthesia || '국소마취';
+            const surgeryType = data.surgeryType || 'Wide excision & FTSG';
+            const timing = data.surgeryTiming || '익일';
+
+            return `By: 상환 ${admDate} ~ ${symptom} ${desc} on ${side} ${location}에 대해 ${bxDate} ${bxDept}에서 시행한 ${bxType} 상 ${dx}, ${location}, ${side} 진단되어 ${timing} ${anesthesia} 하 ${surgeryType} 위해 입원함.`;
+        },
+
+        generatePE(peData) {
+            const lines = [];
+
+            const size = peData.lesionSize || '__ x __';
+            lines.push(`Lesion size: approximately ${size} cm`);
+
+            const appearance = peData.lesionAppearance || '';
+            if (appearance) lines.push(`Appearance: ${appearance}`);
+
+            lines.push(`Ulceration ${peData.ulceration === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Tenderness ${peData.tenderness === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Bleeding ${peData.bleeding === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Fixation to underlying tissue ${peData.skinFixation === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Regional lymphadenopathy ${peData.regionalLN === '+' ? '(+)' : '(-)'}`);
+            lines.push(`Satellite lesion ${peData.satelliteLesion === '+' ? '(+)' : '(-)'}`);
+
+            const vs = peData.vitalSigns || 'stable';
+            const mental = peData.mentalStatus || 'alert';
+            lines.push(`V/S ${vs}, patient ${mental}`);
+
+            return lines.join('\n');
+        },
+
+        generateAssessment(data) {
+            const dx = data.diagnosis || 'Squamous cell carcinoma';
+            const location = data.lesionLocation || 'cheek';
+            const side = data.lesionSide || 'Lt.';
+            return data.assessment || `${dx}, ${location}, ${side}`;
+        },
+
+        generatePlan(data) {
+            const surgeryType = data.surgeryType || 'Wide excision & FTSG';
+            const lines = [];
+            lines.push(surgeryType);
+            lines.push(data.plan_antibiotics || 'IV antibiotics');
+            lines.push(data.plan_painControl || 'Pain control');
+            lines.push(data.plan_woundMgmt || 'Wound management');
+            if (data.planExtra) {
+                data.planExtra.forEach(line => { if (line.trim()) lines.push(line); });
+            }
+            return lines.join('\n');
+        },
+
+        generateGoal(data) {
+            return data.goal || '피부암의 안전한 절제 및 퇴원\n공여부와 수혜부의 안전한 회복 및 퇴원';
         }
     }
 };
@@ -672,6 +780,24 @@ function renderPE() {
             biRow.appendChild(createToggle(finding.id + '_right', finding.default.right));
 
             controls.appendChild(biRow);
+        } else if (finding.type === 'text_input') {
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.style.width = '180px';
+            textInput.style.padding = '4px 8px';
+            textInput.style.border = '1px solid #cbd5e0';
+            textInput.style.borderRadius = '6px';
+            textInput.style.fontSize = '0.82em';
+            textInput.value = peData[finding.id] || finding.default || '';
+            textInput.placeholder = finding.placeholder || '';
+            textInput.addEventListener('input', (e) => {
+                peData[finding.id] = e.target.value;
+                updatePreview();
+            });
+            if (!(finding.id in peData)) {
+                peData[finding.id] = finding.default || '';
+            }
+            controls.appendChild(textInput);
         } else if (finding.type === 'intact') {
             const opts = finding.options || ['intact', 'impaired'];
             const select = document.createElement('select');
@@ -741,12 +867,15 @@ function renderAssessment() {
     group.appendChild(label);
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = formData.assessment || tmpl.assessment.default;
+    const defaultAssessment = (tmpl.generateAssessment && !formData.assessment)
+        ? tmpl.generateAssessment(formData)
+        : tmpl.assessment.default;
+    input.value = formData.assessment || defaultAssessment;
     input.addEventListener('input', (e) => {
         formData.assessment = e.target.value;
         updatePreview();
     });
-    if (!formData.assessment) formData.assessment = tmpl.assessment.default;
+    if (!formData.assessment) formData.assessment = defaultAssessment;
     group.appendChild(input);
     container.appendChild(group);
 }
@@ -756,41 +885,26 @@ function renderPlan() {
     const container = document.getElementById('planForm');
     container.innerHTML = '';
 
-    // Post-op plan
-    const postOpGroup = document.createElement('div');
-    postOpGroup.className = 'form-group';
-    const postOpLabel = document.createElement('label');
-    postOpLabel.textContent = '수술 후 계획';
-    postOpGroup.appendChild(postOpLabel);
-    const postOpInput = document.createElement('input');
-    postOpInput.type = 'text';
-    const defaultPostOp = tmpl.plan.items.find(i => i.id === 'postOp')?.default || '';
-    postOpInput.value = formData.planPostOp || defaultPostOp;
-    postOpInput.addEventListener('input', (e) => {
-        formData.planPostOp = e.target.value;
-        updatePreview();
+    // Render editable plan items (skip auto-generated surgery plan and non-editable items)
+    tmpl.plan.items.forEach(item => {
+        if (item.auto || item.editable === false) return;
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        const label = document.createElement('label');
+        label.textContent = item.id.charAt(0).toUpperCase() + item.id.slice(1).replace(/([A-Z])/g, ' $1');
+        group.appendChild(label);
+        const input = document.createElement('input');
+        input.type = 'text';
+        const dataKey = 'plan_' + item.id;
+        input.value = formData[dataKey] || item.default || '';
+        input.addEventListener('input', (e) => {
+            formData[dataKey] = e.target.value;
+            updatePreview();
+        });
+        if (!(dataKey in formData)) formData[dataKey] = item.default || '';
+        group.appendChild(input);
+        container.appendChild(group);
     });
-    if (!formData.planPostOp) formData.planPostOp = defaultPostOp;
-    postOpGroup.appendChild(postOpInput);
-    container.appendChild(postOpGroup);
-
-    // Medication
-    const medGroup = document.createElement('div');
-    medGroup.className = 'form-group';
-    const medLabel = document.createElement('label');
-    medLabel.textContent = '약물 투여 계획';
-    medGroup.appendChild(medLabel);
-    const medInput = document.createElement('input');
-    medInput.type = 'text';
-    const defaultMed = tmpl.plan.items.find(i => i.id === 'medication')?.default || '';
-    medInput.value = formData.planMedication || defaultMed;
-    medInput.addEventListener('input', (e) => {
-        formData.planMedication = e.target.value;
-        updatePreview();
-    });
-    if (!formData.planMedication) formData.planMedication = defaultMed;
-    medGroup.appendChild(medInput);
-    container.appendChild(medGroup);
 
     // Extra plan lines
     const extraDiv = document.createElement('div');
