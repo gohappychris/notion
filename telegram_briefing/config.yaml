@@ -1,0 +1,18 @@
+channels:
+  - name: "채널명1"
+    username: "@channel_username1"
+    priority: high
+  - name: "채널명2"
+    username: "@channel_username2"
+    priority: medium
+  - name: "채널명3"
+    username: "@channel_username3"
+    priority: low
+
+time_window:
+  start_hour: 22  # KST (전날 밤 10시)
+  end_hour: 8     # KST (당일 오전 8시)
+
+output:
+  max_tokens_per_summary: 2000
+  language: korean
