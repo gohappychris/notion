@@ -1,17 +1,47 @@
 channels:
-  - name: "채널명1"
-    username: "@channel_username1"
+  - name: "스탁이지"
+    username: "@maddingStock"
     priority: high
-  - name: "채널명2"
-    username: "@channel_username2"
+  - name: "루팡"
+    username: "@bornlupin"
+    priority: high
+  - name: "신호와소음"
+    username: "@StudyHODL"
+    priority: high
+  - name: "김찰저"
+    username: "@kimcharger"
+    priority: high
+ - name: "차트북"
+    username: "@chartbook260226"
+    priority: high
+ - name: "프리라이프"
+    username: "@free_life59"
+    priority: high
+ - name: "비즈카페"
+    username: "@bzcftel"
+    priority: high
+ - name: "싸이렌헤드"
+    username: "@sirenHeadtelegram"
+    priority: high
+  - name: "영리한타이거의 주식공부방"
+    username: "@YoungTiger_stock"
     priority: medium
-  - name: "채널명3"
-    username: "@channel_username3"
+  - name: "석학들의 투자 인사이트"
+    username: "@getfeed"
+    priority: medium
+  - name: "Polaristimes"
+    username: "@The_MariTimes"
+    priority: medium
+  - name: "실버만삭스"
+    username: "@silverman_sachs"
+    priority: medium
+  - name: "잠실개미"
+    username: "@jake8lee"
     priority: low
 
 time_window:
-  start_hour: 22  # KST (전날 밤 10시)
-  end_hour: 8     # KST (당일 오전 8시)
+  start_hour: 23  # KST (전날 밤 10시)
+  end_hour: 6     # KST (당일 오전 8시)
 
 output:
   max_tokens_per_summary: 2000
