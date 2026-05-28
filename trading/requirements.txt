@@ -1,0 +1,8 @@
+PyQt5==5.15.10
+pywin32==306
+pandas==2.1.4
+numpy==1.26.2
+ta==0.11.0
+schedule==1.2.1
+python-dotenv==1.0.0
+loguru==0.7.2
