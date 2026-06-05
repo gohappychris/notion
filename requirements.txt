@@ -1,0 +1,6 @@
+# --- Phase 0 / Phase 1 (키움 수집 + 콘솔/Notion/Telegram) ---
+requests>=2.31
+python-dotenv>=1.0
+
+# --- Phase 1+ 에서 사용 (지금은 import 안 함) ---
+# notion-client>=2.2     # Notion DB 적재
